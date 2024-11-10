@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Tie Game</title> <!-- Updated title -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+            margin: 0;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 36px;
+            background-color: white;
+            border: 2px solid #333;
+            cursor: pointer;
+        }
+
+        .cell.taken {
+            cursor: not-allowed;
+        }
+
+        .status {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .restart-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Added h1 tag for the game title -->
+        <h1>Tic Tac Tie Game</h1>
+        
+        <div class="board" id="board"></div>
+        <div class="status" id="status"></div>
+        <button class="restart-btn" id="restart-btn" style="display: none;">Restart Game</button>
+    </div>
+
+    <script>
+        const boardElement = document.getElementById('board');
+        const statusElement = document.getElementById('status');
+        const restartButton = document.getElementById('restart-btn');
+
+        let board = [['', '', ''], ['', '', ''], ['', '', '']];
+        let currentPlayer = 'O';  // O is the human, X is the AI
+
+        const winningCombinations = [
+            [[0, 0], [0, 1], [0, 2]], // row 1
+            [[1, 0], [1, 1], [1, 2]], // row 2
+            [[2, 0], [2, 1], [2, 2]], // row 3
+            [[0, 0], [1, 0], [2, 0]], // column 1
+            [[0, 1], [1, 1], [2, 1]], // column 2
+            [[0, 2], [1, 2], [2, 2]], // column 3
+            [[0, 0], [1, 1], [2, 2]], // diagonal 1
+            [[0, 2], [1, 1], [2, 0]]  // diagonal 2
+        ];
+
+        // Initialize the board
+        function initBoard() {
+            boardElement.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.addEventListener('click', handleCellClick);
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+
+        // Update the board UI
+        function renderBoard() {
+            const cells = boardElement.getElementsByClassName('cell');
+            for (let i = 0; i < 9; i++) {
+                const row = Math.floor(i / 3);
+                const col = i % 3;
+                const cell = cells[i];
+                cell.textContent = board[row][col];
+                if (board[row][col] !== '') {
+                    cell.classList.add('taken');
+                } else {
+                    cell.classList.remove('taken');
+                }
+            }
+        }
+
+        // Check for a winner
+        function checkWinner() {
+            for (let combination of winningCombinations) {
+                const [a, b, c] = combination;
+                const [row1, col1] = a;
+                const [row2, col2] = b;
+                const [row3, col3] = c;
+                if (board[row1][col1] !== '' && board[row1][col1] === board[row2][col2] && board[row2][col2] === board[row3][col3]) {
+                    return board[row1][col1];
+                }
+            }
+            return null;
+        }
+
+        // Check if the board is full
+        function isBoardFull() {
+            return board.every(row => row.every(cell => cell !== ''));
+        }
+
+        // Handle cell click by human
+        function handleCellClick(event) {
+            const row = event.target.dataset.row;
+            const col = event.target.dataset.col;
+            if (board[row][col] === '') {
+                board[row][col] = currentPlayer;
+                renderBoard();
+                const winner = checkWinner();
+                if (winner) {
+                    statusElement.textContent = winner + ' wins!';
+                    restartButton.style.display = 'block';
+                } else if (isBoardFull()) {
+                    statusElement.textContent = "It's a draw!";
+                    restartButton.style.display = 'block';
+                } else {
+                    currentPlayer = 'X';  // Switch to AI's turn
+                    aiMove();
+                }
+            }
+        }
+
+        // AI logic using Minimax
+        function aiMove() {
+            const bestMove = minimax(board, 'X');
+            board[bestMove.row][bestMove.col] = 'X';
+            renderBoard();
+            const winner = checkWinner();
+            if (winner) {
+                statusElement.textContent = winner + ' wins!';
+                restartButton.style.display = 'block';
+            } else if (isBoardFull()) {
+                statusElement.textContent = "It's a draw!";
+                restartButton.style.display = 'block';
+            } else {
+                currentPlayer = 'O';  // Switch back to human's turn
+            }
+        }
+
+        // Minimax algorithm
+        function minimax(board, player) {
+            const winner = checkWinner();
+            if (winner === 'X') return { score: 1 };
+            if (winner === 'O') return { score: -1 };
+            if (isBoardFull()) return { score: 0 };
+
+            const moves = [];
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 3; col++) {
+                    if (board[row][col] === '') {
+                        board[row][col] = player;
+                        const result = minimax(board, player === 'X' ? 'O' : 'X');
+                        moves.push({ row, col, score: result.score });
+                        board[row][col] = '';
+                    }
+                }
+            }
+
+            let bestMove;
+            if (player === 'X') {
+                let bestScore = -Infinity;
+                for (let move of moves) {
+                    if (move.score > bestScore) {
+                        bestScore = move.score;
+                        bestMove = move;
+                    }
+                }
+            } else {
+                let bestScore = Infinity;
+                for (let move of moves) {
+                    if (move.score < bestScore) {
+                        bestScore = move.score;
+                        bestMove = move;
+                    }
+                }
+            }
+
+            return bestMove;
+        }
+
+        // Restart the game
+        function restartGame() {
+            board = [['', '', ''], ['', '', ''], ['', '', '']];
+            currentPlayer = 'O';
+            statusElement.textContent = '';
+            restartButton.style.display = 'none';
+            renderBoard();
+        }
+
+        restartButton.addEventListener('click', restartGame);
+
+        // Initialize the game
+        initBoard();
+        renderBoard();
+    </script>
+</body>
+</html>
